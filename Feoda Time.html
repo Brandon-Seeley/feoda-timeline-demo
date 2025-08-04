@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Feoda Preview</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: url('feoda_Accouting.png') no-repeat center center fixed;
+      background-size: cover;
+      backdrop-filter: brightness(0.95);
+    }
+    h1 {
+      text-align: center;
+    }
+    select {
+      margin-bottom: 20px;
+      padding: 6px;
+      font-size: 16px;
+    }
+    .card {
+      background: white;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-left: 4px solid #ccc;
+      max-width: 600px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    .working {
+      border-left-color: green;
+    }
+    .timeline {
+      display: flex;
+      margin-top: 8px;
+    }
+    .tick {
+      height: 10px;
+      width: calc(100% / 48);
+      background-color: #e0e0e0;
+      position: relative;
+    }
+    .tick.active {
+      background-color: #a5d6a7;
+    }
+    .tick .current {
+      position: absolute;
+      top: -4px;
+      left: 50%;
+      transform: translateX(-50%);
+      height: 14px;
+      width: 2px;
+      background: red;
+    }
+    .tick .marker {
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1px;
+      background-color: #444;
+      height: 6px;
+    }
+    .tick.half .marker {
+      height: 3px;
+      background-color: #999;
+    }
+  </style>
+</head>
+<body>
+  <h1> </h1>
+  <label for="deptSelect">Choose Department:</label>
+  <select id="deptSelect" onchange="render()"></select>
+  <div id="employeeContainer"></div>
+
+  <script src="https://momentjs.com/downloads/moment.min.js"></script>
+  <script src="https://momentjs.com/downloads/moment-timezone-with-data.min.js"></script>
+  <script>
+    const employees = [
+      {
+        department: 'Management (Top Line)',
+        members: [
+          { fullName: 'Ravi Ramanujam', timezone: 'Australia/Melbourne', workingHours: [{ start: '00:00', end: '23:59' }] }
+        ]
+      },
+      {
+        department: 'Solutions - EPM',
+        members: [
+          { fullName: 'George Stamatonikolos', timezone: 'Australia/Melbourne', workingHours: [{ start: '09:00', end: '17:00' }] },
+          { fullName: 'Vijay', timezone: 'Australia/Melbourne', workingHours: [{ start: '09:00', end: '17:00' }] }
+        ]
+      },
+      {
+        department: 'Solutions - ERP Functional',
+        members: [
+          { fullName: 'Pearl Blanco', timezone: 'Australia/Melbourne', workingHours: [{ start: '09:00', end: '18:00' }] },
+          { fullName: 'Jayselle Sale', timezone: 'Asia/Manila', workingHours: [{ start: '07:00', end: '16:00' }] }
+        ]
+      },
+      {
+        department: 'Solutions - ERP Technical',
+        members: [
+          { fullName: 'Ash Alexander', timezone: 'Australia/Melbourne', workingHours: [{ start: '09:00', end: '15:00' }, { start: '17:00', end: '21:00' }] },
+          { fullName: 'Jeff Aguilar', timezone: 'Asia/Manila', workingHours: [{ start: '07:30', end: '16:30' }] },
+          { fullName: 'Veda C', timezone: 'Asia/Kolkata', workingHours: [{ start: '05:00', end: '14:00' }] },
+          { fullName: 'Brandon Seeley', timezone: 'Africa/Johannesburg', workingHours: [{ start: '08:00', end: '17:00' }] },
+          { fullName: 'Kanza Yahya', timezone: 'Asia/Manila', workingHours: [{ start: '07:00', end: '16:00' }] }
+        ]
+      },
+      {
+        department: 'Operations - Legal, Compliance, Governance',
+        members: [
+          { fullName: 'Revanth Prem Kumar', timezone: 'Asia/Manila', workingHours: [{ start: '07:00', end: '16:00' }] },
+          { fullName: 'Edeza Enagan', timezone: 'Asia/Manila', workingHours: [{ start: '07:00', end: '16:00' }] },
+          { fullName: 'Ana Oliveros', timezone: 'Asia/Manila', workingHours: [{ start: '11:00', end: '15:00' }] }
+        ]
+      },
+      {
+        department: 'Operations - Human Resources',
+        members: [
+          { fullName: 'Kelli Dienhoff', timezone: 'Australia/Sydney', workingHours: [{ start: '09:00', end: '17:30' }] }
+        ]
+      },
+      {
+        department: 'Sales & Marketing - Australia',
+        members: [
+          { fullName: 'Johannes Christmann', timezone: 'Australia/Melbourne', workingHours: [{ start: '08:30', end: '17:30' }] }
+        ]
+      },
+      {
+        department: 'Sales & Marketing - EMEA',
+        members: [
+          { fullName: 'Muhammed Hassan', timezone: 'Asia/Dubai', workingHours: [{ start: '09:00', end: '18:00' }] }
+        ]
+      }
+    ];
+
+    const timeToDecimal = (str) => {
+      const [h, m] = str.split(':').map(Number);
+      return h + m / 60;
+    };
+
+    function render() {
+      const container = document.getElementById("employeeContainer");
+      const selected = document.getElementById("deptSelect").value;
+      container.innerHTML = "";
+
+      const dept = employees.find(d => d.department === selected);
+      dept.members.forEach(emp => {
+        const now = moment().tz(emp.timezone);
+        const decNow = now.hours() + now.minutes() / 60;
+
+        const isWorking = emp.workingHours.some(slot => {
+          return decNow >= timeToDecimal(slot.start) && decNow <= timeToDecimal(slot.end);
+        });
+
+        const card = document.createElement("div");
+        card.className = `card ${isWorking ? "working" : ""}`;
+        card.innerHTML = `
+          <strong>${emp.fullName}</strong><br/>
+          ${emp.timezone} — ${now.format("HH:mm")}<br/>
+          Working: ${emp.workingHours.map(s => `${s.start} - ${s.end}`).join(", ")}
+          <div class="timeline">${buildTimeline(emp.workingHours, decNow)}</div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function buildTimeline(slots, currentTime) {
+      let html = "";
+      for (let i = 0; i < 48; i++) {
+        const hour = i / 2;
+        const isHour = i % 2 === 0;
+        const active = slots.some(slot => {
+          const start = timeToDecimal(slot.start);
+          const end = timeToDecimal(slot.end);
+          return hour >= start && hour < end;
+        });
+        const isCurrent = Math.floor(currentTime * 2) === i;
+        html += `
+          <div class="tick ${active ? "active" : ""} ${!isHour ? "half" : ""}">
+            ${isCurrent ? '<div class="current"></div>' : ""}
+            <div class="marker"></div>
+          </div>
+        `;
+      }
+      return html;
+    }
+
+    function initDropdown() {
+      const select = document.getElementById("deptSelect");
+      employees.forEach(group => {
+        const opt = document.createElement("option");
+        opt.value = group.department;
+        opt.textContent = group.department;
+        select.appendChild(opt);
+      });
+    }
+
+    initDropdown();
+    render();
+    setInterval(render, 60000);
+  </script>
+</body>
+</html>
